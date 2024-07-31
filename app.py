@@ -83,6 +83,8 @@ def preprocess_image(image):
 
 @st.cache_resource
 def load_model():
+    update_and_overwrite_class_names()  # Ensure class names are updated
+
     with open('class_names.json', 'r') as f:
         class_names = json.load(f)
 
@@ -117,7 +119,7 @@ def load_model():
     x = base_model.output
     x = GlobalAveragePooling2D()(x)
     x = Dense(1024, activation='relu')(x)
-    predictions = Dense(num_classes, activation='softmax')(x)
+    predictions = Dense(num_classes, activation='softmax')(x)  # Use dynamic number of classes
 
     # Define the model
     model = Model(inputs=base_model.input, outputs=predictions)
