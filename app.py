@@ -1,70 +1,41 @@
 import streamlit as st
-from ultralytics import YOLO
-from PIL import Image, ImageDraw
+from PIL import Image
 import numpy as np
-
-# Load YOLOv8 model
-@st.cache_resource
-def load_model():
-    model_path = "models/best.pt"
-    model = YOLO(model_path)
-    return model
-
-model = load_model()
-
+import tensorflow as tf
+import json
+ 
+# Load the pre-trained model
+model = tf.keras.models.load_model('staff_mobilenet_v2_model.h5')
+ 
+# Load class names
+with open('class_names.json', 'r') as f:
+    class_names = json.load(f)
+ 
+# Define image preprocessing function
 def preprocess_image(image):
-    # Convert image to RGB
-    image = image.convert('RGB')
+    image = image.resize((640, 640))  # Resize to match the model input
+    image = np.array(image) / 255.0   # Normalize pixel values
+    image = np.expand_dims(image, axis=0)  # Add batch dimension
     return image
-
-def infer_image(image):
-    # Run inference
-    results = model(image)
-    print("Results type:", type(results))
-    print("Results contents:", results)
-    return results
-
-def draw_predictions(image, results):
-    # Convert PIL image to numpy array for drawing
-    image_np = np.array(image)
-    draw = ImageDraw.Draw(image)
-
-    # Check if results is a list
-    if isinstance(results, list):
-        results = results[0]  # Get the first item if it's a list
-
-    # Extract bounding boxes and labels
-    boxes = results.boxes
-    names = results.names
-    
-    for box in boxes:
-        # Accessing box information
-        box_xyxy = box.xyxy[0].cpu().numpy()
-        conf = box.conf[0].cpu().numpy()  # Confidence score
-        cls = int(box.cls[0].cpu().numpy())  # Class index
-        label = names[cls] if cls in names else 'Unknown'
-        
-        # Coordinates
-        x1, y1, x2, y2 = box_xyxy
-        
-        # Draw bounding box and label
-        draw.rectangle([x1, y1, x2, y2], outline='red', width=2)
-        draw.text((x1, y1), f"{label} {conf:.2f}", fill='red')
-
-    return image
-
-st.title("Staff Face Recognition with YOLOv8")
-
-uploaded_file = st.file_uploader("Choose an image...", type="jpg")
-if uploaded_file is not None:
-    # Load and preprocess the image
-    image = Image.open(uploaded_file)
-    image = preprocess_image(image)
-    
-    # Run inference
-    results = infer_image(image)
-    
-    # Draw predictions
-    result_image = draw_predictions(image, results)
-    
-    st.image(result_image, caption='Processed Image', use_column_width=True)
+ 
+# Streamlit app layout
+st.title("Staff Image Recognition")
+ 
+st.write("Upload an image of a staff member to get predictions.")
+ 
+# Upload image
+uploaded_image = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
+ 
+if uploaded_image is not None:
+    # Display uploaded image
+    image = Image.open(uploaded_image)
+    st.image(image, caption='Uploaded Image', use_column_width=True)
+ 
+    # Preprocess and predict
+    processed_image = preprocess_image(image)
+    predictions = model.predict(processed_image)
+    predicted_class_index = np.argmax(predictions)
+    predicted_class = class_names[predicted_class_index]
+ 
+    # Display prediction
+    st.write(f"Prediction: {predicted_class} with probability {np.max(predictions):.2f}")
