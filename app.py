@@ -22,15 +22,15 @@ batch_size = 8
  
 # Function to update and overwrite class_names.json with current classes
 def update_and_overwrite_class_names():
-    # Get the list of current class names from the directories
-    all_classes = [d for d in os.listdir(train_dir) if os.path.isdir(os.path.join(train_dir, d))]
-   
-    # Create a new class names dictionary
-    class_names = {cls: i for i, cls in enumerate(all_classes)}
- 
-    # Write the updated class names to class_names.json, overwriting if it exists
-    with open('class_names.json', 'w') as f:
-        json.dump(class_names, f, indent=4)
+    try:
+        all_classes = [d for d in os.listdir(train_dir) if os.path.isdir(os.path.join(train_dir, d))]
+        all_classes.sort()  # Sort class names alphabetically to ensure consistency
+        class_names = {cls: i for i, cls in enumerate(all_classes)}
+        with open('class_names.json', 'w') as f:
+            json.dump(class_names, f, indent=4)
+        st.write("Updated class_names.json")
+    except Exception as e:
+        st.error(f"Error updating class_names.json: {e}")
  
 # Function to create necessary folders
 def create_folders(class_name):
